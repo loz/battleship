@@ -27,6 +27,7 @@ describe JLozinskiPlayer do
       @board = Array.new(10) do 
         Array.new(10, :unknown)
       end
+      @ships = [5,2]
       subject.new_game
     end
 
@@ -39,22 +40,29 @@ describe JLozinskiPlayer do
       it "should :get_shot" do
         subject.should_receive(:get_shot)
 
-        subject.take_turn(@board, [])
+        subject.take_turn(@board, @ships)
       end
 
       it "should remember :last_shot" do
         expected = [3,6]
         subject.should_receive(:get_shot).and_return(expected)
 
-        subject.take_turn(@board, [])
+        subject.take_turn(@board, @ships)
 
         subject.last_shot.should == expected
       end
 
       it "should save state" do 
-        subject.take_turn(@board, [])
+        subject.take_turn(@board, @ships)
 
         subject.state.should == @board
+      end
+
+      it "should save ships_to_find" do
+        expected = [1,2,3]
+        subject.take_turn(@board, expected)
+
+        subject.ships_to_find.should == expected
       end
 
       context "when last_shot_hit" do
@@ -65,7 +73,7 @@ describe JLozinskiPlayer do
         it "should add targets_around_last_shot to targets" do
           subject.stub(:targets_around_last_shot).and_return([[2,3],[:will,:pop]])
 
-          subject.take_turn(@board, [])
+          subject.take_turn(@board, @ships)
 
           subject.instance_variable_get("@targets").should include [2,3]
         end
@@ -94,9 +102,20 @@ describe JLozinskiPlayer do
     end
 
     describe :get_random_shot do
-      it "should return a random x, y co-ordinate" do
-        subject.rand.stub(:rand).and_return(5)
-        subject.get_random_shot.should == [5,5]
+      before(:each) do
+        subject.stub(:ships_to_find).and_return([5,2])
+      end
+
+      it "find possible shots for largest remaining ship" do
+        subject.should_receive(:possible_locations_for_ship).with(5).and_return([])
+        subject.take_turn(@board, @ships)
+      end
+
+      it "should choose a random from the returned locations" do
+        target = [1,2,3]
+        subject.stub(:possible_locations_for_ship).and_return(target)
+        target.should_receive(:sample).with(1).and_return([1])
+        subject.take_turn(@board, @ships).should == 1
       end
     end
 
@@ -107,6 +126,63 @@ describe JLozinskiPlayer do
           Array.new(10, :miss)
         end
       end
+
+      describe :possible_locations_in_row do
+        it "should return an array of the possible locations in a given row" do
+          row = [:unknown, :unknown, :unknown]
+          ship = 2
+          expected = [0, 1]
+
+          subject.possible_locations_in_row(row, ship).should == expected
+        end
+      end
+
+      describe :possible_locations_for_ship do
+        before(:each) do
+          subject.stub(:state).and_return([
+            [:unknown, :unknown, :unknown],
+            [:unknown, :unknown, :unknown],
+            [:unknown, :unknown, :unknown]
+          ])
+        end
+
+        it "should work out possible locations in row for each row" do
+          subject.should_receive(:possible_locations_in_row).exactly(3).times.and_return([])
+
+          subject.possible_locations_for_ship(2)
+        end
+
+        it "should return array of x,y found in each row" do
+          result = subject.possible_locations_for_ship(2)
+          result.should include [0,0]
+          result.should include [0,1]
+        end
+      end
+
+      describe :parts_for_ship do
+        it "should give co-ords for ship of given size, x,y and orientation" do
+          subject.parts_for_ship(2, 0, 0, :across).should == [
+            [0,0], [1,0]
+          ]
+          subject.parts_for_ship(2, 0, 0, :down).should == [
+            [0,0], [0,1]
+          ]
+        end
+      end
+      describe :possible_shots_for_ship do
+        it "should get possible_locations_for_ship" do
+          subject.should_receive(:possible_locations_for_ship).and_return([])
+
+          subject.possible_shots_for_ship(2)
+        end
+
+        it "should find the shots for the locations" do
+          subject.stub(:possible_locations_for_ship).and_return([[0,0]])
+          subject.should_receive(:parts_for_ship).with(2, 0, 0, :across).and_return([])
+          subject.possible_shots_for_ship(2)
+        end
+      end
+
     end
     
     describe :last_shot_hit? do
@@ -149,6 +225,20 @@ describe JLozinskiPlayer do
         end
       end
 
+    end
+    
+    describe :stringify_row do
+      it "should convert :unknowns to U" do
+        subject.stringify_row([:unknown]).should == "U"
+      end
+
+      it "should convert :miss to M" do
+        subject.stringify_row([:miss]).should == "M"
+      end
+
+      it "should convert :hit to H" do
+        subject.stringify_row([:hit]).should == "H"
+      end
     end
 
     describe :targets_around_last_shot do

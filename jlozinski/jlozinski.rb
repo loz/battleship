@@ -1,9 +1,14 @@
 class JLozinskiPlayer
 
-  attr_reader :last_shot, :state, :rand
+  attr_reader :last_shot, :state, :rand, :ships_to_find
 
   def initialize
     @rand = Random.new
+    @string_maps = {
+      :unknown => 'U',
+      :miss => 'M',
+      :hit => 'H'
+    }
   end
 
   def name
@@ -23,6 +28,7 @@ class JLozinskiPlayer
 
   def take_turn(state, ships_remaining)
     @state = state
+    @ships_to_find = ships_remaining
     if last_shot_hit?
       @targets += targets_around_last_shot
     end
@@ -38,9 +44,49 @@ class JLozinskiPlayer
 
   end
 
+  def stringify_row(row)
+    row.map {|c| @string_maps[c]}.join
+  end
+
+  def possible_locations_in_row(row, ship)
+    row_str = stringify_row(row)
+    target = 'U' * ship
+    locations = []
+    while loc = row_str.index(target) do
+      locations << loc
+      row_str[loc] = 'X'
+    end
+    locations
+  end
+
+  def possible_locations_for_ship(ship)
+    possible = []
+    state.each_index do |y|
+      row = state[y]
+      possible += (possible_locations_in_row(row, ship)).map {|x| [x,y]}
+    end
+    possible
+  end
+
+  def possible_shots_for_ship(ship)
+    shots = []
+    possible_locations_for_ship(ship).each do |location|
+      shots += parts_for_ship(ship, *location, :across)
+    end
+    shots
+  end
+
+  def parts_for_ship(ship, x, y, orientation)
+    case orientation
+      when :across
+        (0...ship).map { |s| [x+s, y] }
+      when :down
+        (0...ship).map { |s| [x, y+s] }
+    end
+  end
+
   def get_random_shot
-    x,y = rand.rand(10), rand.rand(10)
-    [x,y]
+    possible_locations_for_ship(ships_to_find.max).sample(1).first
   end
 
   def last_shot_hit?
