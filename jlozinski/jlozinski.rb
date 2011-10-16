@@ -31,6 +31,7 @@ class JLozinskiPlayer
     @ships_to_find = ships_remaining
     if last_shot_hit?
       @targets += targets_around_last_shot
+      @targets.uniq!
     end
     @last_shot = get_shot
   end
@@ -39,9 +40,8 @@ class JLozinskiPlayer
     unless @targets.empty?
       @targets.pop
     else
-      get_random_shot
+      get_likely_shot 
     end
-
   end
 
   def stringify_row(row)
@@ -59,19 +59,34 @@ class JLozinskiPlayer
     locations
   end
 
-  def possible_locations_for_ship(ship)
+  def possible_locations_for_ship(ship, direction=:across)
     possible = []
-    state.each_index do |y|
-      row = state[y]
-      possible += (possible_locations_in_row(row, ship)).map {|x| [x,y]}
+    case direction
+      when :across
+        state.each_index do |y|
+          row = state[y]
+          possible += (possible_locations_in_row(row, ship)).map {|x| [x,y]}
+        end
+      when :down
+        #translate x and y coords
+        tstate = state.transpose
+        tstate.each_index do |x|
+          row = tstate[x]
+          possible += (possible_locations_in_row(row, ship)).map {|y| [x,y]}
+        end
     end
     possible
   end
 
   def possible_shots_for_ship(ship)
     shots = []
+    #horizontals
     possible_locations_for_ship(ship).each do |location|
       shots += parts_for_ship(ship, *location, :across)
+    end
+    #verticals
+    possible_locations_for_ship(ship, :down).each do |location|
+      shots += parts_for_ship(ship, *location, :down)
     end
     shots
   end
@@ -85,8 +100,27 @@ class JLozinskiPlayer
     end
   end
 
-  def get_random_shot
-    possible_locations_for_ship(ships_to_find.max).sample(1).first
+  def get_likely_shot
+    possible = possible_shots_for_ship(ships_to_find.max)
+    heatmap = build_heatmap(possible)
+    find_hottest(heatmap).sample(1).first
+  end
+
+  def find_hottest(m)
+    hottest = []
+    heat = 0
+    m.each_index do |y|
+      m[y].each_index do |x|
+        h = m[y][x]
+        if h == heat
+          hottest << [x,y]
+        elsif h > heat
+          heat = h
+          hottest = [[x,y]]
+        end
+      end
+    end
+    hottest
   end
 
   def last_shot_hit?
@@ -103,6 +137,33 @@ class JLozinskiPlayer
     targets << [x, y-1] unless y==0 || state[y-1][x] != :unknown
     targets << [x, y+1] unless y==9 || state[y+1][x] != :unknown
     targets
+  end
+
+  def build_heatmap(targets)
+    m = Array.new(10) do
+      Array.new(10, 0)
+    end
+    
+    targets.each do |x,y|
+      m[y][x]+= 1
+    end
+    m
+  end
+
+  def print_heatmap(m)
+    puts
+    m.each do |y|
+      y.each do |x|
+        print "%02d " % x
+      end
+      puts
+    end
+  end
+
+  def do_heatmap(targets)
+    m = build_heatmap(targets)
+    print_heatmap(m)
+    print_heatmap(m)
   end
 
 end

@@ -80,8 +80,8 @@ describe JLozinskiPlayer do
       end
 
       describe :get_shot do
-        it "should get_random_shot" do
-          subject.should_receive(:get_random_shot)
+        it "should get_likely_shot" do
+          subject.should_receive(:get_likely_shot)
           subject.get_shot
         end
 
@@ -101,31 +101,47 @@ describe JLozinskiPlayer do
 
     end
 
-    describe :get_random_shot do
+    describe :get_likely_shot do
       before(:each) do
+        @heatmap = Array.new(10) do
+          Array.new(10, 0)
+        end
         subject.stub(:ships_to_find).and_return([5,2])
       end
 
       it "find possible shots for largest remaining ship" do
-        subject.should_receive(:possible_locations_for_ship).with(5).and_return([])
+        subject.should_receive(:possible_shots_for_ship).with(5).and_return([])
         subject.take_turn(@board, @ships)
       end
 
-      it "should choose a random from the returned locations" do
-        target = [1,2,3]
-        subject.stub(:possible_locations_for_ship).and_return(target)
-        target.should_receive(:sample).with(1).and_return([1])
-        subject.take_turn(@board, @ships).should == 1
+      it "should generate a heatmap from the posible locations" do
+        targets = [1,2,3]
+        subject.stub(:possible_shots_for_ship).and_return(targets)
+        subject.should_receive(:build_heatmap).with(targets).and_return(@heatmap)
+        subject.take_turn(@board, @ships)
+      end
+
+      it "should find hottest in heatmap and pick one from set" do
+        subject.stub(:build_heatmap).and_return(@heatmap)
+        hottest = [1,2,3]
+        expected = [[1,2]]
+        subject.should_receive(:find_hottest).with(@heatmap).and_return(hottest)
+        hottest.should_receive(:sample).with(1).and_return(expected)
+        subject.take_turn(@board, @ships).should == expected.first
+      end
+
+      describe :find_hottest do
+        it "should return the hottest item(s)" do
+          @heatmap[1][2] = 5
+          subject.find_hottest(@heatmap).should == [[2,1]]
+          @heatmap[4][2] = 6
+          @heatmap[7][2] = 6
+          subject.find_hottest(@heatmap).should == [[2,4],[2,7]]
+        end
       end
     end
 
     describe :search_for_ship do
-      before(:each) do
-        #a board full of *not* the ship
-        @board = Array.new(10) do 
-          Array.new(10, :miss)
-        end
-      end
 
       describe :possible_locations_in_row do
         it "should return an array of the possible locations in a given row" do
@@ -146,6 +162,7 @@ describe JLozinskiPlayer do
           ])
         end
 
+
         it "should work out possible locations in row for each row" do
           subject.should_receive(:possible_locations_in_row).exactly(3).times.and_return([])
 
@@ -156,6 +173,12 @@ describe JLozinskiPlayer do
           result = subject.possible_locations_for_ship(2)
           result.should include [0,0]
           result.should include [0,1]
+        end
+
+        it "should also work through columns" do
+          result = subject.possible_locations_for_ship(2, :down)
+          result.should include [2,0]
+          result.should include [2,1]
         end
       end
 
@@ -170,15 +193,29 @@ describe JLozinskiPlayer do
         end
       end
       describe :possible_shots_for_ship do
-        it "should get possible_locations_for_ship" do
-          subject.should_receive(:possible_locations_for_ship).and_return([])
 
-          subject.possible_shots_for_ship(2)
+        describe :build_heatmap do
+          it "should be 0 for no given target" do
+            subject.build_heatmap([])[1][1].should == 0
+          end
+
+          it "should be count for count targets" do
+            t = [ [1,1], [1,1] ]
+            subject.build_heatmap(t)[1][1].should == 2
+          end
         end
 
         it "should find the shots for the locations" do
           subject.stub(:possible_locations_for_ship).and_return([[0,0]])
           subject.should_receive(:parts_for_ship).with(2, 0, 0, :across).and_return([])
+          subject.should_receive(:parts_for_ship).with(2, 0, 0, :down).and_return([])
+          subject.possible_shots_for_ship(2)
+        end
+
+        it "should also seach vertical possiblities" do
+          subject.stub(:possible_locations_for_ship).and_return([[0,0]])
+          subject.should_receive(:parts_for_ship).with(2, 0, 0, :across).and_return([])
+          subject.should_receive(:parts_for_ship).with(2, 0, 0, :down).and_return([])
           subject.possible_shots_for_ship(2)
         end
       end
