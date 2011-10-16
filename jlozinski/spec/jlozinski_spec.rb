@@ -9,14 +9,14 @@ describe JLozinskiPlayer do
   end
 
   describe :new_game do
-    it "should return stupid player board for now" do
+    it "should return fixed player board for now" do
 
     subject.new_game.should == [
-      [0, 0, 5, :across],
-      [0, 1, 4, :across],
-      [0, 2, 3, :across],
-      [0, 3, 3, :across],
-      [0, 4, 2, :across]
+      [3, 0, 5, :across],
+      [0, 2, 4, :down],
+      [6, 5, 3, :across],
+      [2, 6, 3, :down],
+      [8, 8, 2, :across]
     ]
     end
   end
@@ -71,24 +71,41 @@ describe JLozinskiPlayer do
         end
       end
 
-      context "when there are targets" do
-        before(:each) do
-          @targets = [[1,1],[2,2]]
-          subject.instance_variable_set('@targets', @targets)
+      describe :get_shot do
+        it "should get_random_shot" do
+          subject.should_receive(:get_random_shot)
+          subject.get_shot
         end
 
-        it "should pop a target off the list for the shot" do
-          shot = subject.take_turn(@board, [])
-          shot.should == [2,2]
-          subject.instance_variable_get('@targets').should == [[1,1]]
+        context "when there are targets" do
+          before(:each) do
+            @targets = [[1,1],[2,2]]
+            subject.instance_variable_set('@targets', @targets)
+          end
+
+          it "should pop a target off the list for the shot" do
+            shot = subject.get_shot
+            shot.should == [2,2]
+            subject.instance_variable_get('@targets').should == [[1,1]]
+          end
         end
+      end
+
+    end
+
+    describe :get_random_shot do
+      it "should return a random x, y co-ordinate" do
+        subject.rand.stub(:rand).and_return(5)
+        subject.get_random_shot.should == [5,5]
       end
     end
 
-    describe :get_shot do
-      it "should return a random x, y co-ordinate" do
-        subject.rand.stub(:rand).and_return(5)
-        subject.get_shot.should == [5,5]
+    describe :search_for_ship do
+      before(:each) do
+        #a board full of *not* the ship
+        @board = Array.new(10) do 
+          Array.new(10, :miss)
+        end
       end
     end
     

@@ -11,19 +11,6 @@ class JLozinskiPlayer
   end
 
   def new_game
-#    x=<<EOF-
-#· · · * * * * * · ·   █▉█▉█▉█▉█▉
-#· · · · · · · · · ·   █▉█▉█▉█▉
-#* · · · · · · · · ·   █▉█▉█▉
-#* · · · · · · · · ·   █▉█▉█▉
-#* · · · · · · · · ·   █▉█▉
-#* · · · · · * * * ·   
-#· · · · · · . · . ·   
-#· · · · · · . · . ·   
-#· · · · · · · · . ·   
-#· · · · · · · · · ·  
-#EOF
-
     @targets = []
     [
       [3, 0, 5, :across],
@@ -39,15 +26,19 @@ class JLozinskiPlayer
     if last_shot_hit?
       @targets += targets_around_last_shot
     end
-    unless @targets.empty?
-      @last_shot = @targets.pop
-    else
-      @last_shot = get_shot
-    end
-    @last_shot
+    @last_shot = get_shot
   end
 
   def get_shot
+    unless @targets.empty?
+      @targets.pop
+    else
+      get_random_shot
+    end
+
+  end
+
+  def get_random_shot
     x,y = rand.rand(10), rand.rand(10)
     [x,y]
   end
