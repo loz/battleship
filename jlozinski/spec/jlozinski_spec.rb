@@ -70,13 +70,33 @@ describe JLozinskiPlayer do
           subject.stub(:last_shot_hit?).and_return(true)
         end
 
-        it "should add targets_around_last_shot to targets" do
-          subject.stub(:targets_around_last_shot).and_return([[2,3],[:will,:pop]])
+        describe "when battleship destroyed" do
+          before(:each) do
+            subject.instance_variable_set("@ships_to_find", [])
+          end
 
-          subject.take_turn(@board, @ships)
+          it "should add stop hunting around targets" do
 
-          subject.instance_variable_get("@targets").should include [2,3]
+            subject.take_turn(@board, @ships)
+
+            subject.instance_variable_get("@targets").should be_empty
+          end
         end
+
+        describe "when ship not fully destroyed" do
+          before(:each) do
+            subject.instance_variable_set("@ships_to_find", @ships)
+          end
+
+          it "should add targets_around_last_shot to targets" do
+            subject.stub(:targets_around_last_shot).and_return([[2,3],[:will,:pop]])
+
+            subject.take_turn(@board, @ships)
+
+            subject.instance_variable_get("@targets").should include [2,3]
+          end
+        end
+
       end
 
       describe :get_shot do
