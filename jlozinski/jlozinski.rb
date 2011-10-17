@@ -17,6 +17,7 @@ class JLozinskiPlayer
 
   def new_game
     @targets = []
+    @hits_in_target = 0
     @ships_to_find = [5,4,3,3,2]
     [
       [3, 0, 5, :across],
@@ -30,18 +31,34 @@ class JLozinskiPlayer
   def take_turn(state, ships_remaining)
     @state = state
     if last_shot_hit?
-      if @ships_to_find.length != ships_remaining.length
+      @hits_in_target += 1
+      sunk = ship_hit(ships_remaining)
+      if sunk && sunk == @hits_in_target
         #stop searching around that area
         @targets = []
-        @ships_to_find = ships_remaining
+        @hits_in_target = 0
       else
-        @ships_to_find = ships_remaining
+        @hits_in_target -= sunk if sunk
         @targets += targets_around_last_shot
         @targets.uniq!
       end
     end
     @ships_to_find = ships_remaining
     @last_shot = get_shot
+  end
+
+  def ship_hit(remaining)
+    a = @ships_to_find.sort.reverse
+    b = remaining.sort.reverse
+    kill = nil
+    while x = a.pop do
+      y = b.pop
+      if x != y
+        kill = x
+        break
+      end
+    end
+    kill
   end
 
   def get_shot

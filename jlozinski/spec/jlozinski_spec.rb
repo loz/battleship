@@ -60,6 +60,7 @@ describe JLozinskiPlayer do
 
       it "should save ships_to_find" do
         expected = [1,2,3]
+        subject.stub(:ship_hit).and_return(false)
         subject.take_turn(@board, expected)
 
         subject.ships_to_find.should == expected
@@ -67,19 +68,52 @@ describe JLozinskiPlayer do
 
       context "when last_shot_hit" do
         before(:each) do
+          subject.instance_variable_set('@hits_in_target', 1)
+          subject.stub(:ship_hit).and_return(5)
           subject.stub(:last_shot_hit?).and_return(true)
+        end
+
+        it "should increment 'hits in current targets'" do
+          subject.instance_variable_set('@hits_in_target', 0)
+          subject.stub(:targets_around_last_shot).and_return []
+          subject.stub(:ship_hit).and_return(false)
+          subject.take_turn(@board, @ships)
+    
+          subject.instance_variable_get('@hits_in_target').should == 1
         end
 
         describe "when battleship destroyed" do
           before(:each) do
-            subject.instance_variable_set("@ships_to_find", [])
+            @hits = 4
+            subject.stub(:targets_around_last_shot).and_return []
+            subject.instance_variable_set('@hits_in_target', @hits)
+            subject.instance_variable_set("@targets", [[1,1], [2,2]])
+            subject.stub(:ship_hit).and_return(5)
+            subject.stub(:get_shot).and_return []
           end
 
-          it "should add stop hunting around targets" do
-
-            subject.take_turn(@board, @ships)
+          it "should stop hunting around targets" do
+            subject.take_turn(@board, @ships_after)
 
             subject.instance_variable_get("@targets").should be_empty
+          end
+
+          context "and hit in target are more than the size of the destroyed ship" do
+            before(:each) do
+              @ships_before = [3,2]
+              @ships_after = [3]
+              @hits = 3
+
+              subject.instance_variable_set('@hits_in_target', @hits)
+              subject.instance_variable_set("@ships_to_find", @ships_before)
+              subject.instance_variable_set("@targets", [[1,1], [2,2]])
+            end
+
+            it "should NOT reset targets" do
+              subject.take_turn(@board, @ships_after)
+
+              subject.instance_variable_get("@targets").should_not be_empty
+            end
           end
         end
 
@@ -97,6 +131,29 @@ describe JLozinskiPlayer do
           end
         end
 
+      end
+
+      describe :ship_hit do
+        before(:each) do
+          @ships = [5,4,3,3,2]
+          @change5 = [4,3,3,2]
+          @change3 = [5,4,3,2]
+        end
+
+        it "should return nil if no change" do
+          subject.instance_variable_set('@ships_to_find', @ships)
+          subject.ship_hit(@ships).should be_nil
+        end
+
+        it "should return 5 when 5 changed" do
+          subject.instance_variable_set('@ships_to_find', @ships)
+          subject.ship_hit(@change5).should == 5
+        end
+
+        it "should return 3 when 3 changed" do
+          subject.instance_variable_set('@ships_to_find', @ships)
+          subject.ship_hit(@change3).should == 3
+        end
       end
 
       describe :get_shot do
