@@ -126,7 +126,18 @@ class JLozinskiPlayer
   end
 
   def get_likely_shot
+    #Heatmap from ALL remaining ships
+    #possible = []
+    #ships_to_find.each do |s|
+    #  possible += possible_shots_for_ship(s)
+    #end
+
+    #Heatmap from LARGEST remaining ship
     possible = possible_shots_for_ship(ships_to_find.max)
+    
+    #Random possible rather than heatmap
+    #return possible.sample(1).first
+    
     heatmap = build_heatmap(possible)
     find_hottest(heatmap).sample(1).first
   end
