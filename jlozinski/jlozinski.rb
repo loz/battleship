@@ -17,6 +17,15 @@ class JLozinskiPlayer
 
   def new_game
     @targets = []
+    #Seed targets with weak parts of weight algorithm
+    @targets << [3,0]
+    @targets << [6,0]
+    @targets << [3,0]
+    @targets << [6,9]
+    @targets << [0,3]
+    @targets << [0,6]
+    @targets << [9,3]
+    @targets << [9,6]
     @hits_in_target = 0
     @ships_to_find = [5,4,3,3,2]
     [
